@@ -124,11 +124,10 @@
 
   <middle>
     <section title="Introduction">
-      <t>To improve accuracy of Source Address Validation (SAV), it is
-      important to verify that an AS has been authorized by an IP address
-      block holder to originate traffic using one or more prefixes within that
-      block as the source IP address. A Traffic Origin Authorization (TOA)
-      provides this function.</t>
+      <t>Source address validation (SAV) requires verifying that an AS has
+      been authorized to originate traffic using one or more prefixes within
+      that block as the source IP address. A Traffic Origin Authorization
+      (TOA) provides this function.</t>
 
       <t>The TOA makes use of the template for RPKI digitally signed object
       <xref target="RFC6488"/>, which defines a Cryptographic Message Syntax
@@ -151,20 +150,26 @@
           validation steps specified in <xref target="RFC6488"/>).</t>
         </list></t>
 
-      <t>Although the TOA and the ROA <xref target="RFC9582"/> both contain a
-      single ASN and a list of one or more IP address prefixes, they have
-      different purposes and contents because prefixes used as the source IP
-      address in data packets (which is contained in TOAs) and prefixes
-      advertised into the routing system (which is contained in ROAs) can be
-      different for the same AS. In addition, some ROAs contain allocated but
-      not advertised prefixes which will not be used as the source IP address
-      in data packets.</t>
+      <t>The content of a TOA identifies a single AS that has been authorized
+      by the IP address block holder to originate traffic and a list of one or
+      more IP address prefixes within the address block that will be used as
+      the source IP address. Although both the TOA and the ROA <xref
+      target="RFC9582"/> include a single ASN and a list of one or more IP
+      address prefixes, they have different intentions and contents because
+      prefixes used as the source IP address in traffic (which is contained in
+      TOAs) and prefixes advertised into the routing system (which is
+      contained in ROAs) can be different and asymmetric for the same AS. In
+      addition, many ROAs include allocated but not advertised prefixes, but
+      these prefixes will not be used as the source IP address in traffic.
+      </t>
 
-      <t>The IP address block holder can register TOAs to authorize which ASes
-      can originate traffic using the source IP address within its address
-      block. TOAs help identify source address spoofing when an AS originates
-      source-spoofed traffic using a source IP address authorized to other
-      ASes (See Section 6 for further details).</t>
+      <t>The IP address block holder can register one or more TOAs to
+      authorize which ASes can originate traffic using prefixes within the
+      block as the source IP address. By registering TOAs, IP address block
+      holders can protect their source IP addresses from being forged by
+      attackers inside unauthorized ASes. ISP or enterprise AS operators can
+      use TOAs to improve the accuracy and robustness of SAV (see Section 6
+      for details).</t>
     </section>
 
     <section title="The TOA Content Type">
@@ -313,40 +318,25 @@ END]]></artwork>
       target="RFC9582"/> also apply to the TOA object.</t>
     </section>
 
-    <section title="Operational Considerations">
-      <t>In general, SAV requires to know the incoming direction of traffic
-      originated from an AS as well as source IP addresses that may be used by
-      that AS. TOAs provide necessary and useful information for the latter.
-      By using TOAs, SAV can accurately identify whether an AS is authorized
-      to use a specific source IP address when originating traffic. For
-      example, existing SAV solutions (e.g., EFP-uRPF <xref
-      target="RFC8704"/>, BAR-SAV <xref target="draft-ietf-sidrops-bar-sav"/>,
-      Bicone SAV <xref target="draft-li-sidrops-bicone-sav"/>) can use TOAs to
-      learn the source IP addresses that an AS may use when originating
-      traffic.</t>
+    <section title="Enhancing SAV with TOAs">
+      <t>Recent SAV mechanisms (e.g., EFP-uRPF <xref target="RFC8704"/>,
+      BAR-SAV <xref target="draft-ietf-sidrops-bar-sav"/>, Bicone SAV <xref
+      target="draft-li-sidrops-bicone-sav"/>) typically use BGP data, ROAs, or
+      IRR route objects to identify prefixes that can be used by an AS as the
+      source IP address to originate traffic. However, due to the asymmetry
+      between prefixes used as the source IP address and prefixes advertised
+      into the routing system as well as the impact of allocated but not
+      advertised prefixes, using BGP data, ROAs, and IRR route objects to
+      perform SAV will have false positives (i.e., blocking legitimate data
+      packets) and false negatives (i.e., permitting spoofing data
+      packets).</t>
 
-      <t>Specifically, SAV on routers can use TOAs to validate the
-      authenticity of source IP address of traffic received from a specific
-      direction as follows:<list style="symbols">
-          <t>If the source IP address is covered by a TOA and is authorized to
-          ASes whose traffic should be received from this direction, the
-          source IP address is considered real and the traffic MUST be
-          permitted.</t>
-
-          <t>If the source IP address is covered by a TOA and is not
-          authorized to any ASes whose traffic should be received from this
-          direction, the source IP address is considered spoofed and the
-          traffic SHOULD be blocked.</t>
-
-          <t>If the source IP address is not covered by any TOAs, SAV cannot
-          identify the authenticity of the source IP address and the traffic
-          SHOULD be permitted.</t>
-        </list></t>
-
-      <t>In this way, IP address block holders can prevent their source IP
-      addresses from being forged by registering TOAs. It can provide
-      incremental benefits when TOAs are incrementally registered by IP
-      address block holders in the Internet.</t>
+      <t>By using TOAs, SAV can accurately identify whether an AS is
+      authorized to use a specific source IP address to originate traffic. If
+      an AS originates spoofinig traffic using a source IP address authorized
+      to other ASes in TOAs, TOA-based SAV can identify and discard this
+      spoofing traffic. Therefore, it is highly recommended to improve the
+      accuracy and robustness upon current SAV by using TOAs.</t>
     </section>
 
     <section title="IANA Considerations">
