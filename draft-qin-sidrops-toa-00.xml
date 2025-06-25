@@ -98,7 +98,7 @@
       </address>
     </author>
 
-    <date day="28" month="November" year="2024"/>
+    <date day="25" month="June" year="2025"/>
 
     <!---->
 
@@ -124,10 +124,19 @@
 
   <middle>
     <section title="Introduction">
-      <t>Source address validation (SAV) requires verifying that an AS has
-      been authorized to originate traffic using one or more prefixes as the
-      source IP address. A Traffic Origin Authorization (TOA) provides this
-      function.</t>
+      <t>Source Address Validation (SAV) aims to detect and discard data
+      packets that use a spoofed source IP address. The fundamental concept of
+      the current practice is directionality: for data packets using a given
+      source IP address, only those coming from a specific direction are
+      considered legitimate. BCP84 <xref target="RFC8704"/> introduces a more
+      structured direction-based logic, i.e., identifying the incoming
+      directions for traffic of a given source AS and determining the source
+      prefix space that the AS is authorized to use.</t>
+
+      <t>To support such validation, a mechanism is needed to allow entities
+      to verify that an AS has been authorized to originate traffic using one
+      or more prefixes as the source IP address. A Traffic Origin
+      Authorization (TOA) provides this function.</t>
 
       <t>The TOA makes use of the template for RPKI digitally signed object
       <xref target="RFC6488"/>, which defines a Cryptographic Message Syntax
@@ -153,21 +162,24 @@
       <t>The content of a TOA identifies a list of one or more ASes that have
       been authorized by the IP address block holder to originate traffic and
       a list of one or more IP address prefixes within the address block that
-      will be used as the source IP address. The TOA and the ROA <xref
-      target="RFC9582"/> have different intentions and contents because
-      prefixes used as the source IP address in traffic (which is contained in
-      TOAs) and prefixes advertised into the routing system (which is
-      contained in ROAs) can be different and asymmetric for the same AS. In
-      addition, many ROAs include allocated but not advertised prefixes, but
-      these prefixes will not be used as the source IP address in traffic.</t>
+      will be used as the source IP address. The IP address block holder can
+      register one or more TOAs to authorize which ASes can originate traffic
+      using specific prefixes within the block as the source IP address. By
+      registering TOAs, IP address block holders can protect their source IP
+      addresses from being forged by attackers inside unauthorized ASes. ISP
+      or enterprise AS operators can use TOAs to improve the accuracy and
+      robustness of SAV (see Section 6 for details).</t>
 
-      <t>The IP address block holder can register one or more TOAs to
-      authorize which ASes can originate traffic using specific prefixes
-      within the block as the source IP address. By registering TOAs, IP
-      address block holders can protect their source IP addresses from being
-      forged by attackers inside unauthorized ASes. ISP or enterprise AS
-      operators can use TOAs to improve the accuracy and robustness of SAV
-      (see Section 6 for details).</t>
+      <t>The TOA and the ROA <xref target="RFC9582"/> have the similar format
+      but have different intentions and contents. Prefixes used as the source
+      IP address in traffic (which is contained in TOAs) and prefixes
+      advertised into the routing system (which is contained in ROAs) can be
+      different and asymmetric for the same AS. For example, in the Content
+      Delivery Networks (CDN) and Direct Server Return (DSR) scenario, the AS
+      where the edge server is located does not advertise the anycast prefix
+      but will originate traffic using a source IP address within the anycast
+      prefix (see <xref
+      target="I-D.ietf-savnet-inter-domain-problem-statement"/>).</t>
     </section>
 
     <section title="The TOA Content Type">
@@ -176,7 +188,7 @@
 
       <t>This OID MUST appear within both the eContentType in the
       encapContentInfo object and the content-type signed attribute in the
-      signerInfo object (See <xref target="RFC6488"/>).</t>
+      signerInfo object (see <xref target="RFC6488"/>).</t>
     </section>
 
     <section title="The TOA eContent">
@@ -186,10 +198,10 @@
       will be used as the source IP address. A TOA is formally defined as:</t>
 
       <figure>
-        <artwork><![CDATA[RPKI-TOA-2024
+        <artwork><![CDATA[RPKI-TOA-2025
      { iso(1) member-body(2) us(840) rsadsi(113549)
        pkcs(1) pkcs9(9) smime(16) mod(0)
-       id-mod-rpkiTOA-2024(TBD) }
+       id-mod-rpkiTOA-2025(TBD) }
 
 DEFINITIONS EXPLICIT TAGS ::=
 BEGIN
@@ -200,7 +212,7 @@ IMPORTS
     { iso(1) member-body(2) us(840) rsadsi(113549) pkcs(1)
       pkcs-9(9) smime(16) modules(0) id-mod-cms-2009(58) } ;
 
-ct-trafficOriginAuthz CONTENT-TYPE ::=
+ct-trafficOriginAttestation CONTENT-TYPE ::=
   { TYPE TrafficOriginAttestation 
     IDENTIFIED BY id-ct-trafficOriginAuthz }
 
@@ -210,41 +222,37 @@ id-ct-trafficOriginAuthz  OBJECT IDENTIFIER ::=
 
 TrafficOriginAttestation ::= SEQUENCE {
   version [0]   INTEGER DEFAULT 0,
-  asSet          ASSet,
+  asSet         ASSet,
   ipaddrBlocks  SEQUENCE (SIZE(1..2)) OF TOAIPAddressFamily }
 
 ASSet ::= SEQUENCE (SIZE(1..10000)) OF ASID
 ASID ::= INTEGER (0..4294967295)
 
-SOURCE-ADDRESS-FAMILY ::= CLASS {
-     &afi              OCTET STRING (SIZE(2)) UNIQUE,
-     &Addresses
-   } WITH SYNTAX { AFI &afi ADDRESSES &Addresses }
-
 TOAIPAddressFamily ::= SEQUENCE {
-  sourceAddressFamily  SOURCE-ADDRESS-FAMILY.&afi ({SourceAddressFamilySet}),
-  sourceAddresses      SOURCE-ADDRESS-FAMILY.&Addresses 
-                                             ({SourceAddressFamilySet}{@sourceAddressFamily}) }
+  addressFamily  ADDRESS-FAMILY.&afi ({AddressFamilySet}),
+  addresses      ADDRESS-FAMILY.&Addresses 
+                                             ({AddressFamilySet}{@addressFamily}) }
 
-SourceAddressFamilySet SOURCE-ADDRESS-FAMILY ::= 
-  { sourceAddressFamilyIPv4 | sourceAddressFamilyIPv6 }
+ADDRESS-FAMILY ::= CLASS {
+  &afi              OCTET STRING (SIZE(2)) UNIQUE,
+  &Addresses
+  } WITH SYNTAX { AFI &afi ADDRESSES &Addresses }
 
-sourceAddressFamilyIPv4 SOURCE-ADDRESS-FAMILY ::= 
+AddressFamilySet ADDRESS-FAMILY ::= 
+  { addressFamilyIPv4 | addressFamilyIPv6 }
+
+addressFamilyIPv4 ADDRESS-FAMILY ::= 
   { AFI afi-IPv4 ADDRESSES TOAAddressesIPv4 }
-
-SourceAddressFamilyIPv6 SOURCE-ADDRESS-FAMILY ::= 
+addressFamilyIPv6 ADDRESS-FAMILY ::= 
   { AFI afi-IPv6 ADDRESSES TOAAddressesIPv6 }
 
 afi-IPv4 OCTET STRING ::= '0001'H
-
 afi-IPv6 OCTET STRING ::= '0002'H
 
 TOAAddressesIPv4 ::= SEQUENCE (SIZE(1..MAX)) OF TOAIPAddress{ub-IPv4}
-
 TOAAddressesIPv6 ::= SEQUENCE (SIZE(1..MAX)) OF TOAIPAddress{ub-IPv6}
 
 ub-IPv4 INTEGER ::= 32
-
 ub-IPv6 INTEGER ::= 128
 
 TOAIPAddress {INTEGER: ub} ::= BIT STRING (SIZE(0..ub))
@@ -265,16 +273,17 @@ END]]></artwork>
 
       <section title="The ipaddrBlocks Element">
         <t>The ipaddrBlocks element encodes the set of IP address prefixes
-        that the AS is authorized to use as the source IP address when
-        originating traffic.</t>
+        that the specified set of AS numbers is authorized to use as source
+        addresses when originating traffic.</t>
 
-        <section title="Type TOAIPAddressFamily">
-          <t>Within the TOAIPAddressFamily structure, the sourceAddressFamily
+        <section title="TOAIPAddressFamily">
+          <t>Within the TOAIPAddressFamily structure, the addressFamily
           element contains the Address Family Identifier (AFI) of an IP
-          address family. Each sourceAddressFamily MUST be either 0001 or
-          0002.</t>
+          address family. Each addressFamily MUST be either 0001 or 0002.
+          There MUST be only one instance of TOAIPAddressFamily per unique AFI
+          in the TOA.</t>
 
-          <t>The sourceAddresses field contains IP prefixes as a sequence of
+          <t>The addresses field contains IP prefixes as a sequence of type
           TOAIPAddress.</t>
         </section>
 
@@ -318,27 +327,43 @@ END]]></artwork>
     </section>
 
     <section title="Enhancing SAV with TOAs">
-      <t>Recent SAV mechanisms (e.g., EFP-uRPF <xref target="RFC8704"/>,
-      BAR-SAV <xref target="draft-ietf-sidrops-bar-sav"/>, Bicone SAV <xref
-      target="draft-li-sidrops-bicone-sav"/>) typically use BGP data, ROAs, or
-      IRR route objects to identify the legitimate source IP address space of
-      traffic coming from an adjacent AS. However, due to the asymmetry
-      between prefixes used as the source IP address and prefixes advertised
-      into the routing system as well as the impact of allocated but not
-      advertised prefixes (as mentioned in Section 1), using BGP data, ROAs,
-      and IRR route objects to perform SAV will have false positives (i.e.,
-      blocking legitimate data packets) and false negatives (i.e., permitting
-      spoofing data packets).</t>
+      <t>Without TOAs, current SAV mechanisms (e.g., EFP-uRPF <xref
+      target="RFC8704"/>) typically use BGP data, ROAs, or IRR route objects
+      to determine the legitimate source IP address space of a given AS.
+      However, due to the asymmetry between prefixes used as the source IP
+      address and prefixes advertised into the routing system (as mentioned in
+      Section 1), using BGP data, ROAs, and IRR route objects to perform SAV
+      will have false positives (i.e., blocking legitimate data packets) and
+      false negatives (i.e., permitting spoofing data packets).</t>
 
       <t>By using TOAs, SAV can accurately identify whether an AS is
       authorized to use a specific source IP address to originate traffic. If
-      an AS originates spoofinig traffic using a source IP address authorized
+      an AS originates spoofing traffic using a source IP address authorized
       to other ASes in TOAs, TOA-based SAV can identify and discard this
       spoofing traffic. Therefore, it is highly recommended to improve the
       accuracy and robustness upon current SAV by using TOAs.</t>
     </section>
 
     <section title="IANA Considerations">
+      <section title="SMI Security for S/MIME CMS Content Type (1.2.840.113549.1.9.16.1)">
+        <t>IANA is requested to allocate the following in the "SMI Security
+        for S/MIME CMS Content Type (1.2.840.113549.1.9.16.1)" registry:</t>
+
+        <texttable>
+          <ttcol>Decimal</ttcol>
+
+          <ttcol>Description</ttcol>
+
+          <ttcol>Reference</ttcol>
+
+          <c>TBD</c>
+
+          <c>id-ct-trafficOriginAuthz</c>
+
+          <c>draft-qin-sidrops-toa</c>
+        </texttable>
+      </section>
+
       <section title="RPKI Signed Objects Registry">
         <t>Please add an item for the TOA file extension to the RPKI Signed
         Object registry
@@ -393,7 +418,7 @@ END]]></artwork>
 
           <c>TBD</c>
 
-          <c>id-mod-rpkiTOA-2024</c>
+          <c>id--rpkiTOA-2025</c>
 
           <c>draft-qin-sidrops-toa</c>
         </texttable>
@@ -407,17 +432,15 @@ Subtype name: rpki-toa
 Required parameters: N/A
 Optional parameters: N/A
 Encoding considerations: binary
-Security considerations: Carries an RPKI TOA. This media type contains no active content.
-                         See Section 5 of draft-qin-sidrops-toa for further information.
+Security considerations: Carries an RPKI TOA. This media type contains no active content. See Section 5 of draft-qin-sidrops-toa for further information.
 Interoperability considerations: None
 Published specification: draft-qin-sidrops-toa
 Applications that use this media type: RPKI operators
 Additional information:
-  Content: This media type is a signed object, as defined in [RFC6488], which contains a 
-           payload of a list of prefixes and an AS identifier as defined in draft-qin-sidrops-toa.
-Magic number(s): None
-File extension(s): .toa
-Macintosh file type code(s): None
+  Content: This media type is a signed object, as defined in [RFC6488], which contains a payload of a list of prefixes and an AS identifier as defined in draft-qin-sidrops-toa.
+  Magic number(s): None
+  File extension(s): .toa
+  Macintosh file type code(s): None
 Person & email address to contact for further information:
   Lancheng Qin <qinlc@mail.zgclab.edu.cn>
 Intended usage: COMMON
@@ -460,32 +483,9 @@ Change controller: IETF]]></artwork>
     </references>
 
     <references title="Informative References">
-      <reference anchor="draft-li-sidrops-bicone-sav">
-        <front>
-          <title>Bicone Source Address Validation</title>
-
-          <author>
-            <organization/>
-          </author>
-
-          <date year="2024"/>
-        </front>
-      </reference>
-
       <?rfc include='reference.RFC.8704'?>
 
-      <reference anchor="draft-ietf-sidrops-bar-sav">
-        <front>
-          <title>Source Address Validation Using BGP UPDATEs, ASPA, and ROA
-          (BAR-SAV)</title>
-
-          <author>
-            <organization/>
-          </author>
-
-          <date year="2024"/>
-        </front>
-      </reference>
+      <?rfc include='reference.I-D.ietf-savnet-inter-domain-problem-statement'?>
     </references>
   </back>
 </rfc>
