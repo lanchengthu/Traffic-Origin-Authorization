@@ -98,6 +98,32 @@
       </address>
     </author>
 
+    <author fullname="Igor Lubashev" initials="I." surname="Lubashev">
+      <organization>Akamai</organization>
+
+      <address>
+        <postal>
+          <street/>
+
+          <city>Cambridge</city>
+
+          <region/>
+
+          <code/>
+
+          <country>United States of America</country>
+        </postal>
+
+        <phone/>
+
+        <facsimile/>
+
+        <email>ilubashe@akamai.com</email>
+
+        <uri/>
+      </address>
+    </author>
+
     <date day="29" month="August" year="2025"/>
 
     <!---->
