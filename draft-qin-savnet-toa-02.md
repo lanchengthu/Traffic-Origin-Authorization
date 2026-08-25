@@ -58,8 +58,6 @@ normative:
 informative:
   RFC8704:
   RFC9582:
-  RFC7761:
-  RFC1812:
   I-D.ietf-savnet-inter-domain-problem-statement:
   I-D.ietf-sidrops-bar-sav:
   I-D.ietf-sidrops-publication-server-bcp:
@@ -108,10 +106,9 @@ This distinction is particularly important in scenarios where traffic is unidire
   the scrubber AS is the route origin,
   whereas the customer AS is a traffic origin for the protected
   prefix without originating the corresponding BGP route.
-* IP multicast [RFC7761]: Sources send multicast traffic to receivers using multicast forwarding mechanisms and do not rely on unicast routing to attract return traffic. Therefore, in some multicast deployments, a source may send multicast traffic using source IP addresses whose prefixes are not advertised in BGP.
-* Operational traffic sourced from non-advertised infrastructure prefixes: An AS may reserve a portion of its address space for infrastructure use without advertising the corresponding prefix in global BGP. Its routers may still use addresses from that prefix as source addresses when generating operational traffic. For example, when returning an ICMP error message to a remote host, a router may use an address from the unadvertised infrastructure prefix assigned to its outgoing interface [RFC1812].
+* Unidirectional or asymmetric delivery systems: Some multicast or satellite delivery systems use a data channel that is unidirectional or asymmetric with respect to the return or control channel. When such traffic crosses AS boundaries, the source AS may originate traffic using source addresses from a prefix for which it does not originate a BGP route.
 
-The purpose of a Traffic Origin Authorization (TOA) is to explicitly authorize an AS to originate traffic using a given prefix as a source address, even when that AS is not authorized to originate any BGP routes to that prefix. A TOA provides a clear separation between the authorization to originate routing information and the authorization to originate data traffic.
+The purpose of a Traffic Origin Authorization (TOA) is to explicitly authorize an AS to originate traffic using a given prefix as a source address, even when that AS is not authorized to originate any BGP routes to that prefix. A conventional ROA [RFC9582] for that AS would also authorize the AS to originate routes for the prefix from the ROV perspective. A TOA provides a clear separation between the authorization to originate routing information and the authorization to originate data traffic.
 
 The TOA makes use of the template for RPKI digitally signed object [RFC6488], which defines a Cryptographic Message Syntax (CMS) wrapper [RFC5652] for a generic validation procedure for RPKI signed objects. Therefore, to complete the specification of the TOA (see Section 4 of [RFC6488]), this document defines:
 
